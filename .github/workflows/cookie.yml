@@ -4,6 +4,7 @@ on:
   schedule:
     # 每 7 天运行一次
     - cron: "0 0 */7 * *"
+  workflow_dispatch: # 手动触发
 
 jobs:
   update-cookies:
