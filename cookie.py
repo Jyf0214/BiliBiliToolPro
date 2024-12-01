@@ -1,7 +1,6 @@
 import os
 import json
 import requests
-import base64
 from cryptography.hazmat.primitives.asymmetric.padding import OAEP, MGF1
 from cryptography.hazmat.primitives.hashes import SHA256
 from cryptography.hazmat.primitives import serialization
@@ -85,21 +84,14 @@ def upload_github_secret(repo_owner, repo_name, secret_name, secret_value, pat):
     if response.status_code != 200:
         raise Exception(f"[ERROR] 无法获取公钥: 状态码 {response.status_code}")
     public_key_data = response.json()
-    public_key_base64 = public_key_data["key"]
+    public_key = public_key_data["key"]
     key_id = public_key_data["key_id"]
 
-    # Base64 解码并转换为 PEM 格式
-    try:
-        decoded_public_key = base64.b64decode(public_key_base64)
-        # 将解码后的字节转换为 PEM 格式
-        public_key_pem = f"-----BEGIN PUBLIC KEY-----\n{decoded_public_key.decode('utf-8')}\n-----END PUBLIC KEY-----"
-        print(f"[INFO] 解码后的公钥: {public_key_pem[:100]}...")  # 打印公钥的前100个字符
-    except Exception as e:
-        print(f"[ERROR] 公钥解码失败: {e}")
-        raise
+    # 打印公钥以验证其格式
+    print(f"[INFO] 获取到公钥: {public_key[:100]}...")  # 只打印公钥的前100个字符
 
     # 加密 Secret
-    encrypted_secret = encrypt_secret(secret_value, public_key_pem)
+    encrypted_secret = encrypt_secret(secret_value, public_key)
     
     # 上传加密后的 Secret
     secret_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/actions/secrets/{secret_name}"
