@@ -1,7 +1,7 @@
 import os
 import json
-import base64
 import requests
+import base64
 from cryptography.hazmat.primitives.asymmetric.padding import OAEP, MGF1
 from cryptography.hazmat.primitives.hashes import SHA256
 from cryptography.hazmat.primitives import serialization
@@ -61,16 +61,10 @@ def extract_cookies_from_file(file_name):
     return "; ".join(f"{cookie['name']}={cookie['value']}" for cookie in cookies)
 
 
-def encrypt_secret(secret, public_key_base64):
+def encrypt_secret(secret, public_key):
     """使用 GitHub 提供的公钥加密 Secret"""
     try:
-        # 解码 Base64 编码的公钥
-        public_key_bytes = base64.b64decode(public_key_base64)
-        
-        # 加载公钥
-        public_key_obj = serialization.load_pem_public_key(public_key_bytes)
-        
-        # 使用公钥加密 Secret
+        public_key_obj = serialization.load_pem_public_key(public_key.encode("utf-8"))
         encrypted_secret = public_key_obj.encrypt(
             secret.encode("utf-8"),
             OAEP(mgf=MGF1(algorithm=SHA256()), algorithm=SHA256(), label=None)
@@ -94,11 +88,18 @@ def upload_github_secret(repo_owner, repo_name, secret_name, secret_value, pat):
     public_key_base64 = public_key_data["key"]
     key_id = public_key_data["key_id"]
 
-    # 打印公钥 Base64 编码的一部分，帮助调试
-    print(f"[INFO] 获取到公钥: {public_key_base64[:100]}...")  # 只打印公钥的前100个字符
+    # Base64 解码并转换为 PEM 格式
+    try:
+        decoded_public_key = base64.b64decode(public_key_base64)
+        # 将解码后的字节转换为 PEM 格式
+        public_key_pem = f"-----BEGIN PUBLIC KEY-----\n{decoded_public_key.decode('utf-8')}\n-----END PUBLIC KEY-----"
+        print(f"[INFO] 解码后的公钥: {public_key_pem[:100]}...")  # 打印公钥的前100个字符
+    except Exception as e:
+        print(f"[ERROR] 公钥解码失败: {e}")
+        raise
 
     # 加密 Secret
-    encrypted_secret = encrypt_secret(secret_value, public_key_base64)
+    encrypted_secret = encrypt_secret(secret_value, public_key_pem)
     
     # 上传加密后的 Secret
     secret_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/actions/secrets/{secret_name}"
