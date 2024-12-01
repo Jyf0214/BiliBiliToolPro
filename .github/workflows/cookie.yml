@@ -32,7 +32,7 @@ jobs:
           WEBDAV_URL: ${{ secrets.WEBDAV_URL }}
           WEBDAV_USERNAME: ${{ secrets.WEBDAV_USERNAME }}
           WEBDAV_PASSWORD: ${{ secrets.WEBDAV_PASSWORD }}
-          GITHUB_PAT: ${{ secrets.GITHUB_PAT }}
+          GITHUB_PAT: ${{ secrets.PAT }}
         run: |
           import os
           import json
