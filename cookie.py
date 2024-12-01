@@ -1,5 +1,6 @@
 import os
 import json
+import base64
 import requests
 from xml.etree import ElementTree
 from cryptography.hazmat.primitives.asymmetric.padding import OAEP, MGF1
@@ -61,11 +62,14 @@ def extract_cookies_from_file(file_name):
 
 
 def encrypt_secret(secret, public_key):
-    """使用 GitHub 提供的公钥加密 Secret"""
-    public_key_obj = serialization.load_pem_public_key(public_key.encode("utf-8"))
-    return public_key_obj.encrypt(
-        secret.encode("utf-8"),
-        OAEP(mgf=MGF1(algorithm=SHA256()), algorithm=SHA256(), label=None)
+    """使用 GitHub 提供的 base64 编码公钥加密 Secret"""
+    decoded_key = base64.b64decode(public_key)
+    public_key_obj = serialization.load_der_public_key(decoded_key)
+    return base64.b64encode(
+        public_key_obj.encrypt(
+            secret.encode("utf-8"),
+            OAEP(mgf=MGF1(algorithm=SHA256()), algorithm=SHA256(), label=None)
+        )
     )
 
 
