@@ -4,19 +4,20 @@ import requests
 from cryptography.hazmat.primitives.asymmetric.padding import OAEP, MGF1
 from cryptography.hazmat.primitives.hashes import SHA256
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import serialization
 from requests.auth import HTTPBasicAuth
 from xml.etree import ElementTree
-
+import base64
 
 def download_json_files(webdav_url, local_dir, username, password):
     """从 WebDAV 服务下载所有 .json 文件到指定目录"""
     print("[INFO] 开始从 WebDAV 服务下载 JSON 文件...")
-    
+
     # 发起 PROPFIND 请求获取文件列表
     response = requests.request(
         "PROPFIND", webdav_url, auth=HTTPBasicAuth(username, password)
     )
-    
+
     # 检查响应状态
     if response.status_code != 207:
         raise Exception(f"[ERROR] WebDAV 服务无法访问: 状态码 {response.status_code}")
@@ -74,11 +75,24 @@ def encrypt_secret(secret, public_key):
         raise
 
 
+def convert_to_pem(base64_key):
+    """将 Base64 编码的公钥转换为 PEM 格式"""
+    # 将 Base64 编码的字符串转换为字节
+    key_bytes = base64.b64decode(base64_key)
+    # 将字节转换为 PEM 格式
+    pem_key = serialization.Encoding.PEM
+    pem_formatted_key = serialization.load_der_public_key(key_bytes).public_bytes(
+        encoding=pem_key,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+    return pem_formatted_key.decode('utf-8')
+
+
 def upload_github_secret(repo_owner, repo_name, secret_name, secret_value, pat):
     """上传 Secret 到 GitHub"""
     url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/actions/secrets/public-key"
     headers = {"Authorization": f"token {pat}"}
-    
+
     # 获取公钥
     response = requests.get(url, headers=headers)
     if response.status_code != 200:
@@ -87,12 +101,13 @@ def upload_github_secret(repo_owner, repo_name, secret_name, secret_value, pat):
     public_key = public_key_data["key"]
     key_id = public_key_data["key_id"]
 
-    # 打印公钥以验证其格式
-    print(f"[INFO] 获取到公钥: {public_key[:100]}...")  # 只打印公钥的前100个字符
+    # 将 Base64 编码的公钥转换为 PEM 格式
+    pem_public_key = convert_to_pem(public_key)
+    print(f"[INFO] 获取到 PEM 格式的公钥: {pem_public_key}")
 
     # 加密 Secret
-    encrypted_secret = encrypt_secret(secret_value, public_key)
-    
+    encrypted_secret = encrypt_secret(secret_value, pem_public_key)
+
     # 上传加密后的 Secret
     secret_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/actions/secrets/{secret_name}"
     payload = {
@@ -107,7 +122,7 @@ def upload_github_secret(repo_owner, repo_name, secret_name, secret_value, pat):
 
 def main():
     print("[INFO] 开始执行脚本...")
-    
+
     webdav_url = os.getenv("WEBDAV_URL")
     username = os.getenv("WEBDAV_USERNAME")
     password = os.getenv("WEBDAV_PASSWORD")
