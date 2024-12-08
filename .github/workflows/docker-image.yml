@@ -89,11 +89,11 @@ jobs:
         with:
           python-version: 3.9
 
-      - name: Install Python dependencies
+      - name: Install Python dependencies and Test App
         run: |
           python -m pip install --upgrade pip
-          pip install requests cryptography resend
-          pip install exchangelib msal
+          pip install requests cryptography resend exchangelib msal
+          python src/bing.py && python src/git.py
 
       # 缓存 Maven 仓库
       - name: Cache local Maven repository
@@ -127,7 +127,9 @@ jobs:
         run: |
           cd ./src/Ray.BiliBiliTool.Console
           dotnet run --runTasks=Daily
-          python src/bing.py && python src/git.py
+
+
+
 
 
 
