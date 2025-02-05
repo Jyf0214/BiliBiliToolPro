@@ -53,7 +53,7 @@ def main():
     webdav_url = os.getenv("WEBDAV_URL")
     username = os.getenv("WEBDAV_USERNAME")
     password = os.getenv("WEBDAV_PASSWORD")
-    local_dir = "downloaded_json"
+    local_dir = "."
 
     try:
         # 下载 JSON 文件
