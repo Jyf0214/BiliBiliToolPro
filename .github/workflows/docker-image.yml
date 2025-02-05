@@ -122,6 +122,18 @@ jobs:
         run: |
           mvn compile exec:java -Dexec.mainClass="top.misec.Main" -Dexec.args="${DEDEUSERID} ${SESSDATA} ${BILI_JCT} ${SCKEY} ${TELEGRAMBOTTOKEN} ${TELEGRAMCHATID}"
 
+      - name: Build with Maven
+        env:
+          BILI_JCT: ${{ secrets.BILI_JCT_2 }}
+          DEDEUSERID: ${{ secrets.DEDEUSERID_2 }}
+          SESSDATA: ${{ secrets.SESSDATA_2 }}
+          SCKEY: ${{ secrets.SCKEY }}
+          TELEGRAMBOTTOKEN: ${{ secrets.TELEGRAMBOTTOKEN }}
+          TELEGRAMCHATID: ${{ secrets.TELEGRAMCHATID }}
+          TZ: Asia/Shanghai
+        run: |
+          mvn compile exec:java -Dexec.mainClass="top.misec.Main" -Dexec.args="${DEDEUSERID} ${SESSDATA} ${BILI_JCT} ${SCKEY} ${TELEGRAMBOTTOKEN} ${TELEGRAMCHATID}"
+
       # 测试运行
       - name: Test APP
         run: |
