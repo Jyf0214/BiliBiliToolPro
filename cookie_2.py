@@ -56,7 +56,7 @@ if __name__ == "__main__":
     # 从环境变量中读取配置
     repo_name = "Jyf0214/BiliBiliToolPro"
     github_token = os.environ.get("PAT") # 从名为 PAT 的环境变量读取 token
-    data_filepath = os.environ.get("DATA_FILEPATH", "data.txt") # 默认值为 "data.txt"
+    data_filepath = os.environ.get("DATA_FILEPATH", "data.json") # 默认值为 "data.txt"
 
     # 检查必要的环境变量是否已设置
     if not repo_name or not github_token:
