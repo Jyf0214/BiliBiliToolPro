@@ -1,13 +1,7 @@
 import os
-import json
 import requests
-from cryptography.hazmat.primitives.asymmetric.padding import OAEP, MGF1
-from cryptography.hazmat.primitives.hashes import SHA256
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives import serialization
 from requests.auth import HTTPBasicAuth
 from xml.etree import ElementTree
-import base64
 
 def download_json_files(webdav_url, local_dir, username, password):
     """从 WebDAV 服务下载所有 .json 文件到指定目录"""
@@ -31,7 +25,8 @@ def download_json_files(webdav_url, local_dir, username, password):
         raise Exception(f"[ERROR] 解析 WebDAV 响应失败: {e}")
 
     if not files:
-        raise Exception("[WARNING] 未找到任何 JSON 文件，检查 WebDAV 服务目录。")
+        print("[WARNING] 未找到任何 JSON 文件，检查 WebDAV 服务目录。")
+        return  # 直接返回，避免引发异常
 
     # 创建本地存储目录
     if not os.path.exists(local_dir):
@@ -52,100 +47,20 @@ def download_json_files(webdav_url, local_dir, username, password):
         except Exception as e:
             print(f"[ERROR] 下载文件 {file} 过程中发生错误: {e}")
 
-
-def extract_cookies_from_file(file_name):
-    """从 JSON 文件提取 Cookies"""
-    with open(file_name, 'r', encoding='utf-8') as file:
-        data = json.load(file)
-    cookies = data.get("cookie_info", {}).get("cookies", [])
-    return "; ".join(f"{cookie['name']}={cookie['value']}" for cookie in cookies)
-
-
-def encrypt_secret(secret, public_key):
-    """使用 GitHub 提供的公钥加密 Secret"""
-    try:
-        public_key_obj = serialization.load_pem_public_key(public_key.encode("utf-8"))
-        encrypted_secret = public_key_obj.encrypt(
-            secret.encode("utf-8"),
-            OAEP(mgf=MGF1(algorithm=SHA256()), algorithm=SHA256(), label=None)
-        )
-        return encrypted_secret
-    except Exception as e:
-        print(f"[ERROR] 公钥加密失败: {e}")
-        raise
-
-
-def convert_to_pem(base64_key):
-    """将 Base64 编码的公钥转换为 PEM 格式"""
-    # 将 Base64 编码的字符串转换为字节
-    key_bytes = base64.b64decode(base64_key)
-    # 将字节转换为 PEM 格式
-    pem_key = serialization.Encoding.PEM
-    pem_formatted_key = serialization.load_der_public_key(key_bytes).public_bytes(
-        encoding=pem_key,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo
-    )
-    return pem_formatted_key.decode('utf-8')
-
-
-def upload_github_secret(repo_owner, repo_name, secret_name, secret_value, pat):
-    """上传 Secret 到 GitHub"""
-    url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/actions/secrets/public-key"
-    headers = {"Authorization": f"token {pat}"}
-
-    # 获取公钥
-    response = requests.get(url, headers=headers)
-    if response.status_code != 200:
-        raise Exception(f"[ERROR] 无法获取公钥: 状态码 {response.status_code}")
-    public_key_data = response.json()
-    public_key = public_key_data["key"]
-    key_id = public_key_data["key_id"]
-
-    # 将 Base64 编码的公钥转换为 PEM 格式
-    pem_public_key = convert_to_pem(public_key)
-    print(f"[INFO] 获取到 PEM 格式的公钥: {pem_public_key}")
-
-    # 加密 Secret
-    encrypted_secret = encrypt_secret(secret_value, pem_public_key)
-
-    # 上传加密后的 Secret
-    secret_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/actions/secrets/{secret_name}"
-    payload = {
-        "encrypted_value": encrypted_secret.decode("utf-8"),
-        "key_id": key_id,
-    }
-    upload_response = requests.put(secret_url, headers=headers, json=payload)
-    if upload_response.status_code != 201:
-        raise Exception(f"[ERROR] 上传 Secret 失败: 状态码 {upload_response.status_code}")
-    print(f"[INFO] 成功上传 Secret: {secret_name}")
-
-
 def main():
     print("[INFO] 开始执行脚本...")
 
     webdav_url = os.getenv("WEBDAV_URL")
     username = os.getenv("WEBDAV_USERNAME")
     password = os.getenv("WEBDAV_PASSWORD")
-    pat = os.getenv("GITHUB_PAT")
-    repo_owner = "Jyf0214"
-    repo_name = "BiliBiliToolPro"
     local_dir = "downloaded_json"
 
     try:
         # 下载 JSON 文件
         download_json_files(webdav_url, local_dir, username, password)
-
-        # 提取并上传 Secret
-        for idx, file_name in enumerate(os.listdir(local_dir), start=1):
-            if file_name.endswith(".json"):
-                local_path = os.path.join(local_dir, file_name)
-                cookie_string = extract_cookies_from_file(local_path)
-                secret_name = f"COOKIESTR{idx if idx > 1 else ''}"
-                upload_github_secret(repo_owner, repo_name, secret_name, cookie_string, pat)
         print("[INFO] 脚本执行完成！")
     except Exception as e:
         print(f"[ERROR] 脚本执行失败: {e}")
-
 
 if __name__ == "__main__":
     main()
