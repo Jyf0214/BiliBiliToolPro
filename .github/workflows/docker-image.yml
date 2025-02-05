@@ -122,7 +122,7 @@ jobs:
         run: |
           mvn compile exec:java -Dexec.mainClass="top.misec.Main" -Dexec.args="${DEDEUSERID} ${SESSDATA} ${BILI_JCT} ${SCKEY} ${TELEGRAMBOTTOKEN} ${TELEGRAMCHATID}"
 
-      - name: Build with Maven
+      - name: Build with Maven Again
         env:
           BILI_JCT: ${{ secrets.BILI_JCT_2 }}
           DEDEUSERID: ${{ secrets.DEDEUSERID_2 }}
