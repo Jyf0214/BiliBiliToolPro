@@ -37,3 +37,4 @@ jobs:
           PAT: ${{ secrets.PAT }}
         run: |
           python cookie.py
+          python cookie_2.py
