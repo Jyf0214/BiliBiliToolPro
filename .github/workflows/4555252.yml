@@ -35,7 +35,7 @@ jobs:
       - name: Run refresh script
         env:
           # 从仓库的 Secrets 中读取配置并设置为环境变量
-          PAt: ${{ secrets.MY_PAT }}
+          PAT: ${{ secrets.MY_PAT }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           
           # 读取 Bilibili 账号信息
