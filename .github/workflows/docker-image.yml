@@ -125,5 +125,11 @@ jobs:
       # 测试运行
       - name: Test APP
         run: |
-          cd ./src/Ray.BiliBiliTool.Console
-          dotnet run --runTasks=Daily
+          # 下载并解压 BiliBiliToolPro 程序包
+          wget https://github.com/RayWangQvQ/BiliBiliToolPro/releases/download/0.3.1/bilibili-tool-pro-v0.3.1-linux-x64.zip
+          unzip bilibili-tool-pro-v0.3.1-linux-x64.zip
+          cd ./linux-x64/
+          # 将原本的 appsettings.json 文件移动到解压后的文件夹中
+          cp ../src/Ray.BiliBiliTool.Console/appsettings.json .
+          # 运行每日任务
+          ./Ray.BiliBiliTool.Console --runTasks=Daily
