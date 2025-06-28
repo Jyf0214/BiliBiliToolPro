@@ -1,0 +1,47 @@
+name: Bilibili Cookie Refresh
+
+on:
+  # 允许手动在 Actions 页面触发
+  workflow_dispatch:
+
+  # 设置定时任务，每7天运行一次
+  # cron 表达式 '0 18 */7 * *' 表示每月的第7、14、21、28天的18:00(UTC)运行
+  # 你可以根据需要调整，例如 '0 18 * * 0' 表示每周日的18:00(UTC)运行
+  schedule:
+    - cron: '0 18 */7 * *'
+
+jobs:
+  refresh-cookie:
+    # 使用最新的 ubuntu 系统
+    runs-on: ubuntu-latest
+    steps:
+      # 第一步：拉取你的仓库代码
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 第二步：设置 Python 环境
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10' # 可以指定你需要的 Python 版本
+
+      # 第三步：安装脚本所需的依赖库
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pynacl requests
+
+      # 第四步：运行刷新脚本
+      - name: Run refresh script
+        env:
+          # 从仓库的 Secrets 中读取配置并设置为环境变量
+          GITHUB_TOKEN: ${{ secrets.MY_PAT }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          
+          # 读取 Bilibili 账号信息
+          # 如果你有多个账号，请在这里添加 BILI_INFO_2, BILI_INFO_3 等
+          BILI_INFO_1: ${{ secrets.BILI_INFO_1 }}
+          BILI_INFO_2: ${{ secrets.BILI_INFO_2 }}
+          # BILI_INFO_3: ${{ secrets.BILI_INFO_3 }}
+
+        run: python refresh_and_upload.py
