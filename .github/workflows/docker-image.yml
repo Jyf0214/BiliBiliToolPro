@@ -10,8 +10,8 @@ on:
 env:
   ASPNETCORE_ENVIRONMENT: ${{ secrets.ENV }} # 运行环境
   Ray_BiliBiliCookies__1: ${{ secrets.COOKIESTR }}
-  Ray_BiliBiliCookies__2: ${{ secrets.COOKIESTR2 }}
-  Ray_BiliBiliCookies__3: ${{ secrets.COOKIESTR3 }}
+  Ray_BiliBiliCookies__2: ${{ secrets.COOKIESTR_2 }}
+  Ray_BiliBiliCookies__3: ${{ secrets.COOKIESTR_3 }}
   # 推送：
   Ray_Serilog__WriteTo__3__Args__botToken: ${{ secrets.PUSHTGTOKEN }} # Telegram
   Ray_Serilog__WriteTo__3__Args__chatId: ${{ secrets.PUSHTGCHATID }}
