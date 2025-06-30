@@ -40,8 +40,8 @@ jobs:
           
           # 读取 Bilibili 账号信息
           # 如果你有多个账号，请在这里添加 BILI_INFO_2, BILI_INFO_3 等
-          BILI_INFO_1: ${{ secrets.BILI_INFO_1 }}
-          BILI_INFO_2: ${{ secrets.BILI_INFO_2 }}
+          BILI_INFO_1: ${{ secrets.BILI_JSON_DATA }}
+          BILI_INFO_2: ${{ secrets.BILI_JSON_DATA_2 }}
           # BILI_INFO_3: ${{ secrets.BILI_INFO_3 }}
 
         run: python refresh_and_upload.py
