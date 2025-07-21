@@ -89,3 +89,4 @@ jobs:
           echo "找到可执行文件: $EXECUTABLE_PATH"
           echo "开始运行每日任务..."
           "$EXECUTABLE_PATH" --runTasks=Daily
+          "$EXECUTABLE_PATH" --runTasks=Manga
