@@ -122,53 +122,84 @@ jobs:
         run: |
           mvn compile exec:java -Dexec.mainClass="top.misec.Main" -Dexec.args="${DEDEUSERID} ${SESSDATA} ${BILI_JCT} ${SCKEY} ${TELEGRAMBOTTOKEN} ${TELEGRAMCHATID}"
 
-      - name: Test APP
+      - name: Run BiliBiliToolPro with Fallback
+        # 将你的 BiliBili Cookie 等信息设置为 GitHub 仓库的 Secrets
+        # 然后在这里通过 env 关键字将它们注入到工作流的环境变量中
+        # 程序会自动从环境变量读取以 BILI_ 开头的配置
+        # 更多环境变量请参考官方文档
+        env:
+          # 【必需】哔哩哔哩账户的必要 Cookie
+          BILI_USERID: ${{ secrets.BILI_USERID }}
+          BILI_SESSDATA: ${{ secrets.BILI_SESSDATA }}
+          BILI_BILI_JCT: ${{ secrets.BILI_BILI_JCT }}
+          # 【可选】用于推送通知的 PUSH_KEY，例如 ServerChan
+          PUSH_KEY: ${{ secrets.PUSH_KEY }}
+          # 【重要】定义一个已知可用的稳定版本号，用于最新版失败时回退
+          FALLBACK_BILI_VERSION: "v3.4.0" # 请根据实际情况修改此版本号
         run: |
-          # 1. 安装 jq 以便解析 API 响应
-          sudo apt-get install jq
+          # 安装 jq
+          sudo apt-get -y install jq
 
-          # 2. 从 GitHub API 获取最新的 Release 信息
-          LATEST_RELEASE_INFO=$(curl -s "https://api.github.com/repos/RayWangQvQ/BiliBiliToolPro/releases/latest")
+          # 封装运行函数
+          run_bilibili_tool() {
+            VERSION_TAG=$1
+            
+            echo "---"
+            echo "Attempting to run BiliBiliToolPro version: ${VERSION_TAG}"
 
-          # 3. 确定运行环境对应的系统和架构
-          # GitHub Actions 的 runner.os 会返回 Linux, Windows, macOS
-          # BiliBiliToolPro 的命名使用 linux, win, osx
-          if [ "${{ runner.os }}" == "Linux" ]; then
-            TARGET_OS="linux"
-          elif [ "${{ runner.os }}" == "Windows" ]; then
-            TARGET_OS="win"
-          elif [ "${{ runner.os }}" == "macOS" ]; then
-            TARGET_OS="osx"
+            # 1. 获取 Release 信息
+            if [ "$VERSION_TAG" == "latest" ]; then
+              RELEASE_INFO=$(curl -s "https://api.github.com/repos/RayWangQvQ/BiliBiliToolPro/releases/latest")
+            else
+              RELEASE_INFO=$(curl -s "https://api.github.com/repos/RayWangQvQ/BiliBiliToolPro/releases/tags/${VERSION_TAG}")
+            fi
+            
+            # 2. 动态匹配系统和架构
+            if [ "${{ runner.os }}" == "Linux" ]; then TARGET_OS="linux"; else TARGET_OS="win"; fi
+            TARGET_ARCH=$(echo "${{ runner.arch }}" | tr '[:upper:]' '[:lower:]')
+            
+            # 3. 获取下载链接
+            ASSET_NAME_PATTERN="bilibili-tool-pro-v.*-${TARGET_OS}-${TARGET_ARCH}.zip"
+            DOWNLOAD_URL=$(echo "$RELEASE_INFO" | jq -r ".assets[] | select(.name | test(\"$ASSET_NAME_PATTERN\")) | .browser_download_url")
+            
+            if [ -z "$DOWNLOAD_URL" ]; then
+              echo "Error: Could not find download URL for version ${VERSION_TAG} on ${TARGET_OS}-${TARGET_ARCH}."
+              return 1
+            fi
+            
+            DOWNLOAD_FILE=$(basename "$DOWNLOAD_URL")
+            EXTRACT_DIR="${DOWNLOAD_FILE%.zip}"
+
+            # 4. 下载并解压
+            echo "Downloading from: $DOWNLOAD_URL"
+            wget -q "$DOWNLOAD_URL"
+            unzip -q "$DOWNLOAD_FILE"
+            cd "./${EXTRACT_DIR}/"
+            
+            # 5. 赋予权限并使用命令行参数运行
+            chmod +x Ray.BiliBiliTool.Console
+            echo "Starting tasks with command-line arguments..."
+            # 【核心改动】使用命令行参数替代 appsettings.json
+            ./Ray.BiliBiliTool.Console -DailyTask:Enable=true -MangaTask:Enable=true -DailyTask:NumberOfCoins=0
+          }
+
+          # --- 主逻辑 ---
+          # 步骤 1: 尝试运行最新版本
+          if run_bilibili_tool "latest"; then
+            echo "✅ Latest version ran successfully."
+            exit 0
           fi
-          
-          # runner.arch 返回 X64, ARM64 等
-          # BiliBiliToolPro 的命名使用 x64, arm64
-          TARGET_ARCH=$(echo "${{ runner.arch }}" | tr '[:upper:]' '[:lower:]')
 
-          # 4. 构造期望的二进制文件名并从API响应中获取下载链接
-          # 例: bilibili-tool-pro-v1.0.0-linux-x64.zip
-          ASSET_NAME_PATTERN="bilibili-tool-pro-v.*-${TARGET_OS}-${TARGET_ARCH}.zip"
-          DOWNLOAD_URL=$(echo "$LATEST_RELEASE_INFO" | jq -r ".assets[] | select(.name | test(\"$ASSET_NAME_PATTERN\")) | .browser_download_url")
+          # 步骤 2: 如果最新版失败，清理后尝试运行后备版本
+          echo "⚠️ Latest version failed. Attempting fallback to version ${FALLBACK_BILI_VERSION}."
+          cd ..
+          rm -rf ./*-linux-x64*
 
-          if [ -z "$DOWNLOAD_URL" ]; then
-            echo "错误：无法找到适用于 ${{ runner.os }} (${TARGET_OS}) / ${{ runner.arch }} (${TARGET_ARCH}) 的最新版本。"
-            exit 1
+          if run_bilibili_tool "${FALLBACK_BILI_VERSION}"; then
+            echo "✅ Fallback version ${FALLBACK_BILI_VERSION} ran successfully."
+            exit 0
           fi
 
-          DOWNLOAD_FILE=$(basename "$DOWNLOAD_URL")
-          EXTRACT_DIR="${TARGET_OS}-${TARGET_ARCH}"
-          
-          echo "检测到最新版本，正在下载: $DOWNLOAD_URL"
-
-          # 5. 下载并解压最新的 BiliBiliToolPro 程序包
-          wget "$DOWNLOAD_URL"
-          unzip "$DOWNLOAD_FILE"
-          cd "./${EXTRACT_DIR}/"
-          
-          # 6. 将原本的 appsettings.json 文件移动到解压后的文件夹中
-          # 注意：请确保此路径在您的项目中是正确的
-          cp ../src/Ray.BiliBiliTool.Console/appsettings.json .
-          
-          # 7. 赋予执行权限并运行每日任务
-          chmod +x Ray.BiliBiliTool.Console
-          ./Ray.BiliBiliTool.Console --runTasks=Daily
+          # 步骤 3: 如果全部失败
+          echo "❌ Both latest and fallback versions failed. The workflow has failed."
+          exit 1
