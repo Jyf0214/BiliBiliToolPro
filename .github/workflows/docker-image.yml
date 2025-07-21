@@ -9,6 +9,8 @@ env:
   Ray_BiliBiliCookies__2: ${{ secrets.COOKIESTR_2 }}
   Ray_BiliBiliCookies__3: ${{ secrets.COOKIESTR_3 }}
 
+  # 每日任务：
+  Ray_DailyTaskConfig__NumberOfCoins: 0
 
 jobs:
   pre-check:
@@ -86,4 +88,4 @@ jobs:
           chmod +x "$EXECUTABLE_PATH"
           echo "找到可执行文件: $EXECUTABLE_PATH"
           echo "开始运行每日任务..."
-          "$EXECUTABLE_PATH" --DailyTask:Enable=true --MangaTask:Enable=true --DailyTask:NumberOfCoins=0
+          "$EXECUTABLE_PATH" --DailyTask:Enable=true --MangaTask:Enable=true 
