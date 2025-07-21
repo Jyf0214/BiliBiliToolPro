@@ -7,7 +7,6 @@ env:
   ASPNETCORE_ENVIRONMENT: ${{ secrets.ENV }}
   Ray_BiliBiliCookies__1: ${{ secrets.COOKIESTR }}
   Ray_BiliBiliCookies__2: ${{ secrets.COOKIESTR_2 }}
-  Ray_BiliBiliCookies__3: ${{ secrets.COOKIESTR_3 }}
 
   # 每日任务：
   Ray_DailyTaskConfig__NumberOfCoins: 0
