@@ -9,50 +9,6 @@ env:
   Ray_BiliBiliCookies__2: ${{ secrets.COOKIESTR_2 }}
   Ray_BiliBiliCookies__3: ${{ secrets.COOKIESTR_3 }}
 
-  # 推送：
-  Ray_Serilog__WriteTo__3__Args__botToken: ${{ secrets.PUSHTGTOKEN }}
-  Ray_Serilog__WriteTo__3__Args__chatId: ${{ secrets.PUSHTGCHATID }}
-  Ray_Serilog__WriteTo__3__Args__restrictedToMinimumLevel: ${{ secrets.PUSHTGLEVEL }}
-  Ray_Serilog__WriteTo__4__Args__webHookUrl: ${{ secrets.PUSHWEIXINURL }}
-  Ray_Serilog__WriteTo__4__Args__restrictedToMinimumLevel: ${{ secrets.PUSHWEIXINLEVEL }}
-  Ray_Serilog__WriteTo__5__Args__webHookUrl: ${{ secrets.PUSHDINGURL }}
-  Ray_Serilog__WriteTo__5__Args__restrictedToMinimumLevel: ${{ secrets.PUSHDINGLEVEL }}
-  Ray_Serilog__WriteTo__6__Args__scKey: ${{ secrets.PUSHSCKEY }}
-  Ray_Serilog__WriteTo__6__Args__turboScKey: ${{ secrets.PUSHSERVERTSCKEY }}
-  Ray_Serilog__WriteTo__6__Args__restrictedToMinimumLevel: ${{ secrets.PUSHSERVERLEVEL }}
-  Ray_Serilog__WriteTo__7__Args__sKey: ${{ secrets.PUSHCOOLSKEY }}
-  Ray_Serilog__WriteTo__7__Args__restrictedToMinimumLevel: ${{ secrets.PUSHCOOLLEVEL }}
-  Ray_Serilog__WriteTo__8__Args__api: ${{ secrets.PUSHOTHERAPI }}
-  Ray_Serilog__WriteTo__8__Args__placeholder: ${{ secrets.PUSHOTHERPLACEHOLDER }}
-  Ray_Serilog__WriteTo__8__Args__bodyJsonTemplate: ${{ secrets.PUSHOTHERBODYJSONTEMPLATE }}
-  Ray_Serilog__WriteTo__8__Args__restrictedToMinimumLevel: ${{ secrets.PUSHOTHERLEVEL }}
-  Ray_Serilog__WriteTo__9__Args__token: ${{ secrets.PUSHPLUSTOKEN }}
-  Ray_Serilog__WriteTo__9__Args__topic: ${{ secrets.PUSHPLUSTOPIC }}
-  Ray_Serilog__WriteTo__9__Args__channel: ${{ secrets.PUSHPLUSCHANNEL }}
-  Ray_Serilog__WriteTo__9__Args__webhook: ${{ secrets.PUSHPLUSWEBHOOK }}
-  Ray_Serilog__WriteTo__9__Args__restrictedToMinimumLevel: ${{ secrets.PUSHPLUSLEVEL }}
-
-  # 安全相关：
-  Ray_Security__IsSkipDailyTask: ${{ secrets.ISSKIPDAILYTASK }}
-  Ray_Security__IntervalSecondsBetweenRequestApi: ${{ secrets.INTERVALSECONDSBETWEENREQUESTAPI }}
-  Ray_Security__IntervalMethodTypes: ${{ secrets.INTERVALMETHODTYPES }}
-  Ray_Security__UserAgent: ${{ secrets.USERAGENT }}
-  Ray_Security__WebProxy: ${{ secrets.WEBPROXY }}
-  Ray_Security__RandomSleepMaxMin: ${{ secrets.RANDOMSLEEPMAXMIN }}
-
-  # 每日任务：
-  Ray_DailyTaskConfig__NumberOfCoins: ${{ secrets.NUMBEROFCOINS }}
-  Ray_DailyTaskConfig__SaveCoinsWhenLv6: ${{ secrets.SAVECOINSWHENLV6 }}
-  Ray_DailyTaskConfig__SelectLike: ${{ secrets.SELECTLIKE }}
-  Ray_DailyTaskConfig__SupportUpIds: ${{ secrets.SUPPORTUPIDS }}
-  Ray_DailyTaskConfig__DayOfAutoCharge: ${{ secrets.DAYOFAUTOCHARGE }}
-  Ray_DailyTaskConfig__AutoChargeUpId: ${{ secrets.AUTOCHARGEUPID }}
-  Ray_DailyTaskConfig__ChargeComment: ${{ secrets.CHARGECOMMENT }}
-  Ray_DailyTaskConfig__DayOfReceiveVipPrivilege: ${{ secrets.DAYOFRECEIVEVIPPRIVILEGE }}
-  Ray_DailyTaskConfig__DayOfExchangeSilver2Coin: ${{ secrets.DAYOFEXCHANGESILVER2COIN }}
-  Ray_DailyTaskConfig__DevicePlatform: ${{ secrets.DEVICEPLATFORM }}
-  Ray_Serilog__WriteTo__0__Args__restrictedToMinimumLevel: ${{ secrets.CONSOLELOGLEVEL }}
-  Ray_Serilog__WriteTo__0__Args__outputTemplate: ${{ secrets.CONSOLELOGTEMPLATE }}
 
 jobs:
   pre-check:
