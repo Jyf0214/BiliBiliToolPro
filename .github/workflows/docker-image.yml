@@ -122,14 +122,53 @@ jobs:
         run: |
           mvn compile exec:java -Dexec.mainClass="top.misec.Main" -Dexec.args="${DEDEUSERID} ${SESSDATA} ${BILI_JCT} ${SCKEY} ${TELEGRAMBOTTOKEN} ${TELEGRAMCHATID}"
 
-      # 测试运行
       - name: Test APP
         run: |
-          # 下载并解压 BiliBiliToolPro 程序包
-          wget https://github.com/RayWangQvQ/BiliBiliToolPro/releases/download/0.3.1/bilibili-tool-pro-v0.3.1-linux-x64.zip
-          unzip bilibili-tool-pro-v0.3.1-linux-x64.zip
-          cd ./linux-x64/
-          # 将原本的 appsettings.json 文件移动到解压后的文件夹中
+          # 1. 安装 jq 以便解析 API 响应
+          sudo apt-get install jq
+
+          # 2. 从 GitHub API 获取最新的 Release 信息
+          LATEST_RELEASE_INFO=$(curl -s "https://api.github.com/repos/RayWangQvQ/BiliBiliToolPro/releases/latest")
+
+          # 3. 确定运行环境对应的系统和架构
+          # GitHub Actions 的 runner.os 会返回 Linux, Windows, macOS
+          # BiliBiliToolPro 的命名使用 linux, win, osx
+          if [ "${{ runner.os }}" == "Linux" ]; then
+            TARGET_OS="linux"
+          elif [ "${{ runner.os }}" == "Windows" ]; then
+            TARGET_OS="win"
+          elif [ "${{ runner.os }}" == "macOS" ]; then
+            TARGET_OS="osx"
+          fi
+          
+          # runner.arch 返回 X64, ARM64 等
+          # BiliBiliToolPro 的命名使用 x64, arm64
+          TARGET_ARCH=$(echo "${{ runner.arch }}" | tr '[:upper:]' '[:lower:]')
+
+          # 4. 构造期望的二进制文件名并从API响应中获取下载链接
+          # 例: bilibili-tool-pro-v1.0.0-linux-x64.zip
+          ASSET_NAME_PATTERN="bilibili-tool-pro-v.*-${TARGET_OS}-${TARGET_ARCH}.zip"
+          DOWNLOAD_URL=$(echo "$LATEST_RELEASE_INFO" | jq -r ".assets[] | select(.name | test(\"$ASSET_NAME_PATTERN\")) | .browser_download_url")
+
+          if [ -z "$DOWNLOAD_URL" ]; then
+            echo "错误：无法找到适用于 ${{ runner.os }} (${TARGET_OS}) / ${{ runner.arch }} (${TARGET_ARCH}) 的最新版本。"
+            exit 1
+          fi
+
+          DOWNLOAD_FILE=$(basename "$DOWNLOAD_URL")
+          EXTRACT_DIR="${TARGET_OS}-${TARGET_ARCH}"
+          
+          echo "检测到最新版本，正在下载: $DOWNLOAD_URL"
+
+          # 5. 下载并解压最新的 BiliBiliToolPro 程序包
+          wget "$DOWNLOAD_URL"
+          unzip "$DOWNLOAD_FILE"
+          cd "./${EXTRACT_DIR}/"
+          
+          # 6. 将原本的 appsettings.json 文件移动到解压后的文件夹中
+          # 注意：请确保此路径在您的项目中是正确的
           cp ../src/Ray.BiliBiliTool.Console/appsettings.json .
-          # 运行每日任务
+          
+          # 7. 赋予执行权限并运行每日任务
+          chmod +x Ray.BiliBiliTool.Console
           ./Ray.BiliBiliTool.Console --runTasks=Daily
