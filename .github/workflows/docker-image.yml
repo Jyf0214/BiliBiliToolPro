@@ -1,85 +1,21 @@
-name: bilibili-daily-task
+name: test-gitlab-sync
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 16 * * *'  # UTC time; 16:00 UTC == 00:00 UTC+8
-
-env:
-  ASPNETCORE_ENVIRONMENT: ${{ secrets.ENV }}
-  Ray_BiliBiliCookies__1: ${{ secrets.COOKIESTR }}
-  Ray_BiliBiliCookies__2: ${{ secrets.COOKIESTR_2 }}
-  Ray_DailyTaskConfig__NumberOfCoins: 0
 
 jobs:
-  run-daily-task:
+  sync-to-gitlab:
     runs-on: ubuntu-latest
     steps:
-      - name: Set time zone
-        run: sudo timedatectl set-timezone 'Asia/Shanghai'
-
-      - name: Checkout
+      - name: Checkout full history
         uses: actions/checkout@v4
-
-      - name: Set up JDK 1.8
-        uses: actions/setup-java@v3
         with:
-          distribution: 'temurin'
-          java-version: '8'
+          fetch-depth: 0  # 拉取完整历史
 
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.9
-
-      - name: Install Python dependencies and Test App
+      - name: Set Git identity
         run: |
-          python -m pip install --upgrade pip
-          pip install requests cryptography resend exchangelib msal
-          python bing.py && python git.py || true
-
-      - name: Cache local Maven repository
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-
-      - name: Setup .NET 6
-        uses: actions/setup-dotnet@v3
-        with:
-          dotnet-version: 6.0.x
-
-      - name: Build with Maven
-        env:
-          BILI_JCT: ${{ secrets.BILI_JCT }}
-          DEDEUSERID: ${{ secrets.DEDEUSERID }}
-          SESSDATA: ${{ secrets.SESSDATA }}
-          SCKEY: ${{ secrets.SCKEY }}
-          TELEGRAMBOTTOKEN: ${{ secrets.TELEGRAMBOTTOKEN }}
-          TELEGRAMCHATID: ${{ secrets.TELEGRAMCHATID }}
-          TZ: Asia/Shanghai
-        run: |
-          mvn compile exec:java -Dexec.mainClass="top.misec.Main" -Dexec.args="${DEDEUSERID} ${SESSDATA} ${BILI_JCT} ${SCKEY} ${TELEGRAMBOTTOKEN} ${TELEGRAMCHATID}"
-
-      - name: Download and Run BiliBiliToolPro
-        run: |
-          LATEST_RELEASE_INFO=$(curl -s "https://api.github.com/repos/RayWangQvQ/BiliBiliToolPro/releases/latest")
-          DOWNLOAD_URL=$(echo "$LATEST_RELEASE_INFO" | jq -r '.assets[] | select(.name | contains("linux-x64.zip")).browser_download_url')
-          wget "$DOWNLOAD_URL" -O bilibili-tool-pro-latest-linux-x64.zip
-          mkdir -p ./bilibili-tool-pro-latest
-          unzip -o bilibili-tool-pro-latest-linux-x64.zip -d ./bilibili-tool-pro-latest
-          EXECUTABLE_PATH=$(find ./bilibili-tool-pro-latest -name "Ray.BiliBiliTool.Console" -type f)
-          if [ -z "$EXECUTABLE_PATH" ]; then
-            echo "错误：无法在解压文件中找到 Ray.BiliBiliTool.Console"
-            exit 1
-          fi
-          chmod +x "$EXECUTABLE_PATH"
-          echo "找到可执行文件: $EXECUTABLE_PATH"
-          echo "开始运行每日任务..."
-          "$EXECUTABLE_PATH" --runTasks=Daily
-          "$EXECUTABLE_PATH" --runTasks=Manga
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Set repo info
         id: repo-info
@@ -88,25 +24,12 @@ jobs:
           echo "repo=$(echo ${{ github.repository }} | cut -d'/' -f2)" >> $GITHUB_OUTPUT
 
       - name: Sync to GitLab (极狐香港站)
-        if: env.GITLAB_TOKEN != ''
         env:
           GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
           OWNER: ${{ steps.repo-info.outputs.owner }}
           REPO: ${{ steps.repo-info.outputs.repo }}
         run: |
           git remote add gitlab "https://oauth2:${GITLAB_TOKEN}@gitlab.hk/${OWNER}/${REPO}.git" || true
-          git push --all --force gitlab
-          git push --tags --force gitlab
+          git pull --rebase gitlab main || true
+          git push gitlab main
           echo "✅ Synced to GitLab (gitlab.hk)"
-
-      - name: Sync to GitCode
-        if: env.GITCODE_TOKEN != ''
-        env:
-          GITCODE_TOKEN: ${{ secrets.GITCODE_TOKEN }}
-          OWNER: ${{ steps.repo-info.outputs.owner }}
-          REPO: ${{ steps.repo-info.outputs.repo }}
-        run: |
-          git remote add gitcode "https://${OWNER}:${GITCODE_TOKEN}@gitcode.com/${OWNER}/${REPO}.git" || true
-          git push --all --force gitcode
-          git push --tags --force gitcode
-          echo "✅ Synced to GitCode"
