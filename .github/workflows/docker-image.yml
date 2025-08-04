@@ -1,10 +1,10 @@
-name: test-gitlab-sync
+name: sync-to-gitlab-gitcode
 
 on:
   workflow_dispatch:
 
 jobs:
-  sync-to-gitlab:
+  sync:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout full history
@@ -12,18 +12,19 @@ jobs:
         with:
           fetch-depth: 0  # 拉取完整历史
 
-      - name: Set Git identity
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
       - name: Set repo info
         id: repo-info
         run: |
           echo "owner=$(echo ${{ github.repository }} | cut -d'/' -f1)" >> $GITHUB_OUTPUT
           echo "repo=$(echo ${{ github.repository }} | cut -d'/' -f2)" >> $GITHUB_OUTPUT
 
-      - name: Sync to GitLab (极狐香港站)
+      - name: Set Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      # ✅ 同步到 GitLab（极狐香港站）
+      - name: Sync to GitLab
         env:
           GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
           OWNER: ${{ steps.repo-info.outputs.owner }}
@@ -33,3 +34,15 @@ jobs:
           git pull --rebase gitlab main || true
           git push gitlab main
           echo "✅ Synced to GitLab (gitlab.hk)"
+
+      # ✅ 同步到 GitCode
+      - name: Sync to GitCode
+        env:
+          GITCODE_TOKEN: ${{ secrets.GITCODE_TOKEN }}
+          OWNER: ${{ steps.repo-info.outputs.owner }}
+          REPO: ${{ steps.repo-info.outputs.repo }}
+        run: |
+          git remote add gitcode "https://${OWNER}:${GITCODE_TOKEN}@gitcode.com/${OWNER}/${REPO}.git" || true
+          git pull --rebase gitcode main || true
+          git push gitcode main
+          echo "✅ Synced to GitCode"
