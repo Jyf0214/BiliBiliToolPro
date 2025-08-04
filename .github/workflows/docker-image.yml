@@ -80,7 +80,7 @@ jobs:
 
       # ---------- 同步到 GitLab ----------
       - name: Sync to GitLab (极狐香港站)
-        uses: Jyf0214/reusable-sync@v1
+        uses: Jyf0214/reusable-sync@v1.0.0
         with:
           target-remote-host: 'gitlab.hk'
           target-token: ${{ secrets.GITLAB_TOKEN }}
