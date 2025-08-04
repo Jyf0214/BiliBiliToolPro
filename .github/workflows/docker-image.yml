@@ -5,45 +5,50 @@ on:
   schedule:
     - cron: '0 16 * * *' # UTC 16:00 等于北京 00:00
 
+# 将环境变量定义在顶层，以便所有 job 都能访问
 env:
   ASPNETCORE_ENVIRONMENT: ${{ secrets.ENV }}
   Ray_BiliBiliCookies__1: ${{ secrets.COOKIESTR }}
   Ray_BiliBiliCookies__2: ${{ secrets.COOKIESTR_2 }}
   Ray_DailyTaskConfig__NumberOfCoins: 0
-  # 将 secrets 转换为 env，以便在后续步骤中使用
-  GITLAB_TOKEN_ENV: ${{ secrets.GITLAB_TOKEN }}
-  GITCODE_TOKEN_ENV: ${{ secrets.GITCODE_TOKEN }}
 
 jobs:
+  # ---
+  # 任务 1: 使用可复用工作流同步到 GitLab
+  # ---
+  sync-to-gitlab:
+    # 在 jobs 顶层使用 'uses' 来调用可复用工作流
+    uses: Jyf0214/reusable-sync/.github/workflows/action.yml@main
+    with:
+      target-remote-host: 'gitlab.hk'
+      git-auth-user: 'oauth2'
+      target-repo-owner: 'Jyf0214'
+      target-repo-name: 'BiliBiliToolPro'
+    # 使用 'secrets' 块来传递机密信息给可复用工作流
+    secrets:
+      target-token: ${{ secrets.GITLAB_TOKEN }}
+
+  # ---
+  # 任务 2: 使用可复用工作流同步到 GitCode
+  # ---
+  sync-to-gitcode:
+    uses: Jyf0214/reusable-sync/.github/workflows/action.yml@main
+    with:
+      target-remote-host: 'gitcode.com'
+      git-auth-user: ${{ github.repository_owner }}
+      target-repo-owner: ${{ github.repository_owner }}
+      target-repo-name: ${{ github.event.repository.name }}
+    secrets:
+      target-token: ${{ secrets.GITCODE_TOKEN }}
+
+  # ---
+  # 任务 3: 执行主要的每日任务
+  # ---
   run-daily-task:
+    # 使用 'needs' 来确保此任务在前两个同步任务成功后才运行
+    needs: [sync-to-gitlab, sync-to-gitcode]
     runs-on: ubuntu-latest
     steps:
-      # ----------------------------------------------------------
-      # 1. 先同步到 GitLab & GitCode
-      # ----------------------------------------------------------
-      - name: Sync to GitLab
-        uses: Jyf0214/reusable-sync/.github/workflows/action.yml@main
-        with:
-          target-remote-host: 'gitlab.hk'
-          git-auth-user: 'oauth2'
-          target-repo-owner: 'Jyf0214'
-          target-repo-name: 'BiliBiliToolPro'
-          # 通过 with 传递 token
-          target-token: ${{ env.GITLAB_TOKEN_ENV }}
-
-      - name: Sync to GitCode
-        uses: Jyf0214/reusable-sync/.github/workflows/action.yml@main
-        with:
-          target-remote-host: 'gitcode.com'
-          git-auth-user: ${{ github.repository_owner }}
-          target-repo-owner: ${{ github.repository_owner }}
-          target-repo-name: ${{ github.event.repository.name }}
-          # 通过 with 传递 token
-          target-token: ${{ env.GITCODE_TOKEN_ENV }}
-
-      # ----------------------------------------------------------
-      # 2. 环境准备 & 后续任务
-      # ----------------------------------------------------------
       - name: Set time zone
         run: sudo timedatectl set-timezone 'Asia/Shanghai'
 
