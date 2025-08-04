@@ -1,48 +1,93 @@
-name: sync-to-gitlab-gitcode
+name: bilibili-daily-task
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 16 * * *'          
+
+env:
+  ASPNETCORE_ENVIRONMENT: ${{ secrets.ENV }}
+  Ray_BiliBiliCookies__1: ${{ secrets.COOKIESTR }}
+  Ray_BiliBiliCookies__2: ${{ secrets.COOKIESTR_2 }}
+  Ray_DailyTaskConfig__NumberOfCoins: 0
 
 jobs:
-  sync:
+  run-daily-task:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout full history
+      # ---------- 基础环境 ----------
+      - name: Set time zone
+        run: sudo timedatectl set-timezone 'Asia/Shanghai'
+
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 拉取完整历史
+          fetch-depth: 0        # reusable-sync 需要完整历史
 
-      - name: Set repo info
-        id: repo-info
+      - name: Set up JDK 8
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '8'
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      - name: Install Python deps & test
         run: |
-          echo "owner=$(echo ${{ github.repository }} | cut -d'/' -f1)" >> $GITHUB_OUTPUT
-          echo "repo=$(echo ${{ github.repository }} | cut -d'/' -f2)" >> $GITHUB_OUTPUT
+          python -m pip install --upgrade pip
+          pip install requests cryptography resend exchangelib msal
+          python bing.py && python git.py || true
 
-      - name: Set Git identity
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Cache Maven
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-maven-
 
-      # ✅ 同步到 GitLab（极狐香港站）
-      - name: Sync to GitLab
+      - name: Setup .NET 6
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 6.0.x
+
+      # ---------- B 站任务 ----------
+      - name: Build & run BiliBiliToolPro (Maven)
         env:
-          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
-          OWNER: ${{ steps.repo-info.outputs.owner }}
-          REPO: ${{ steps.repo-info.outputs.repo }}
+          BILI_JCT: ${{ secrets.BILI_JCT }}
+          DEDEUSERID: ${{ secrets.DEDEUSERID }}
+          SESSDATA: ${{ secrets.SESSDATA }}
+          SCKEY: ${{ secrets.SCKEY }}
+          TELEGRAMBOTTOKEN: ${{ secrets.TELEGRAMBOTTOKEN }}
+          TELEGRAMCHATID: ${{ secrets.TELEGRAMCHATID }}
+          TZ: Asia/Shanghai
         run: |
-          git remote add gitlab "https://oauth2:${GITLAB_TOKEN}@gitlab.hk/${OWNER}/${REPO}.git" || true
-          git pull --rebase gitlab main || true
-          git push gitlab main
-          echo "✅ Synced to GitLab (gitlab.hk)"
+          mvn compile exec:java -Dexec.mainClass="top.misec.Main" \
+            -Dexec.args="${DEDEUSERID} ${SESSDATA} ${BILI_JCT} ${SCKEY} ${TELEGRAMBOTTOKEN} ${TELEGRAMCHATID}"
 
-      # ✅ 同步到 GitCode
+      - name: Download & run BiliBiliToolPro (Release)
+        run: |
+          LATEST=$(curl -s https://api.github.com/repos/RayWangQvQ/BiliBiliToolPro/releases/latest)
+          DL_URL=$(echo "$LATEST" | jq -r '.assets[] | select(.name | contains("linux-x64.zip")).browser_download_url')
+          wget "$DL_URL" -O bilibili-tool-pro.zip
+          unzip -q bilibili-tool-pro.zip -d ./bili
+          EXEC=$(find ./bili -name "Ray.BiliBiliTool.Console" -type f)
+          chmod +x "$EXEC"
+          "$EXEC" --runTasks=Daily
+          "$EXEC" --runTasks=Manga
+
+      # ---------- 同步到 GitLab ----------
+      - name: Sync to GitLab (极狐香港站)
+        uses: Jyf0214/reusable-sync@v1
+        with:
+          target-remote-host: 'gitlab.hk'
+          target-token: ${{ secrets.GITLAB_TOKEN }}
+
+      # ---------- 同步到 GitCode ----------
       - name: Sync to GitCode
-        env:
-          GITCODE_TOKEN: ${{ secrets.GITCODE_TOKEN }}
-          OWNER: ${{ steps.repo-info.outputs.owner }}
-          REPO: ${{ steps.repo-info.outputs.repo }}
-        run: |
-          git remote add gitcode "https://${OWNER}:${GITCODE_TOKEN}@gitcode.com/${OWNER}/${REPO}.git" || true
-          git pull --rebase gitcode main || true
-          git push gitcode main
-          echo "✅ Synced to GitCode"
+        uses: Jyf0214/reusable-sync@v1
+        with:
+          target-remote-host: 'gitcode.com'
+          target-token: ${{ secrets.GITCODE_TOKEN }}
