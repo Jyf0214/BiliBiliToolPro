@@ -77,12 +77,8 @@ jobs:
           "$EXEC" --runTasks=Daily
           "$EXEC" --runTasks=Manga
 
-  # ------------------------------------------------------------------
-  # 2. 使用 Universal Git Sync Action 同步到 GitLab / GitCode
-  # ------------------------------------------------------------------
   sync-gitlab:
-    needs: run-daily-task
-    uses: Jyf0214/reusable-sync/action.yml@v1.0.0
+    uses: Jyf0214/reusable-sync@v1.0.0
     with:
       target-remote-host: 'gitlab.hk'
       git-auth-user: 'oauth2'
@@ -93,7 +89,7 @@ jobs:
 
   sync-gitcode:
     needs: run-daily-task
-    uses: Jyf0214/reusable-sync/action.yml@v1.0.0
+    uses: Jyf0214/reusable-sync@v1.0.0
     with:
       target-remote-host: 'gitcode.com'
       git-auth-user: '${{ github.repository_owner }}'
