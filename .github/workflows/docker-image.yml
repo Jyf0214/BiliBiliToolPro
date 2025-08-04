@@ -87,7 +87,7 @@ jobs:
 
       # ---------- 同步到 GitCode ----------
       - name: Sync to GitCode
-        uses: Jyf0214/reusable-sync@v1
+        uses: Jyf0214/reusable-sync@v1.0.0
         with:
           target-remote-host: 'gitcode.com'
           target-token: ${{ secrets.GITCODE_TOKEN }}
