@@ -1,9 +1,8 @@
 name: bilibili-daily-task
-
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 16 * * *'          
+    - cron: '0 16 * * *'          # UTC 16:00 等于北京 00:00
 
 env:
   ASPNETCORE_ENVIRONMENT: ${{ secrets.ENV }}
@@ -12,17 +11,17 @@ env:
   Ray_DailyTaskConfig__NumberOfCoins: 0
 
 jobs:
+  # ------------------------------------------------------------------
+  # 1. 日常任务（保持你原来的逻辑）
+  # ------------------------------------------------------------------
   run-daily-task:
     runs-on: ubuntu-latest
     steps:
-      # ---------- 基础环境 ----------
       - name: Set time zone
         run: sudo timedatectl set-timezone 'Asia/Shanghai'
 
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0        # reusable-sync 需要完整历史
 
       - name: Set up JDK 8
         uses: actions/setup-java@v3
@@ -35,7 +34,7 @@ jobs:
         with:
           python-version: 3.9
 
-      - name: Install Python deps & test
+      - name: Install Python dependencies & test
         run: |
           python -m pip install --upgrade pip
           pip install requests cryptography resend exchangelib msal
@@ -53,8 +52,7 @@ jobs:
         with:
           dotnet-version: 6.0.x
 
-      # ---------- B 站任务 ----------
-      - name: Build & run BiliBiliToolPro (Maven)
+      - name: Build & run with Maven
         env:
           BILI_JCT: ${{ secrets.BILI_JCT }}
           DEDEUSERID: ${{ secrets.DEDEUSERID }}
@@ -64,30 +62,42 @@ jobs:
           TELEGRAMCHATID: ${{ secrets.TELEGRAMCHATID }}
           TZ: Asia/Shanghai
         run: |
-          mvn compile exec:java -Dexec.mainClass="top.misec.Main" \
+          mvn compile exec:java \
+            -Dexec.mainClass="top.misec.Main" \
             -Dexec.args="${DEDEUSERID} ${SESSDATA} ${BILI_JCT} ${SCKEY} ${TELEGRAMBOTTOKEN} ${TELEGRAMCHATID}"
 
-      - name: Download & run BiliBiliToolPro (Release)
+      - name: Download & run BiliBiliToolPro
         run: |
           LATEST=$(curl -s https://api.github.com/repos/RayWangQvQ/BiliBiliToolPro/releases/latest)
-          DL_URL=$(echo "$LATEST" | jq -r '.assets[] | select(.name | contains("linux-x64.zip")).browser_download_url')
-          wget "$DL_URL" -O bilibili-tool-pro.zip
-          unzip -q bilibili-tool-pro.zip -d ./bili
-          EXEC=$(find ./bili -name "Ray.BiliBiliTool.Console" -type f)
+          DL_URL=$(echo "$LATEST" | jq -r '.assets[] | select(.name | endswith("linux-x64.zip")).browser_download_url')
+          wget "$DL_URL" -O tool.zip
+          unzip -o tool.zip -d tool
+          EXEC=$(find tool -name "Ray.BiliBiliTool.Console" -type f)
           chmod +x "$EXEC"
           "$EXEC" --runTasks=Daily
           "$EXEC" --runTasks=Manga
 
-      # ---------- 同步到 GitLab ----------
-      - name: Sync to GitLab (极狐香港站)
-        uses: Jyf0214/reusable-sync@v1.0.0
-        with:
-          target-remote-host: 'gitlab.hk'
-          target-token: ${{ secrets.GITLAB_TOKEN }}
+  # ------------------------------------------------------------------
+  # 2. 使用 Universal Git Sync Action 同步到 GitLab / GitCode
+  # ------------------------------------------------------------------
+  sync-gitlab:
+    needs: run-daily-task
+    uses: Jyf0214/reusable-sync/action.yml@v1.0.0
+    with:
+      target-remote-host: 'gitlab.hk'
+      git-auth-user: 'oauth2'
+      target-repo-owner: 'Jyf0214'
+      target-repo-name: 'BiliBiliToolPro'
+    secrets:
+      target-token: ${{ secrets.GITLAB_TOKEN }}
 
-      # ---------- 同步到 GitCode ----------
-      - name: Sync to GitCode
-        uses: Jyf0214/reusable-sync@v1.0.0
-        with:
-          target-remote-host: 'gitcode.com'
-          target-token: ${{ secrets.GITCODE_TOKEN }}
+  sync-gitcode:
+    needs: run-daily-task
+    uses: Jyf0214/reusable-sync/action.yml@v1.0.0
+    with:
+      target-remote-host: 'gitcode.com'
+      git-auth-user: '${{ github.repository_owner }}'
+      target-repo-owner: '${{ github.repository_owner }}'
+      target-repo-name: '${{ github.event.repository.name }}'
+    secrets:
+      target-token: ${{ secrets.GITCODE_TOKEN }}
