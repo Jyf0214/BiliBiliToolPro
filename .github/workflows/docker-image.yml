@@ -1,4 +1,5 @@
 name: bilibili-daily-task
+
 on:
   workflow_dispatch:
   schedule:
@@ -11,12 +12,35 @@ env:
   Ray_DailyTaskConfig__NumberOfCoins: 0
 
 jobs:
-  # ------------------------------------------------------------------
-  # 1. 日常任务（保持你原来的逻辑）
-  # ------------------------------------------------------------------
   run-daily-task:
     runs-on: ubuntu-latest
     steps:
+      # ----------------------------------------------------------
+      # 1. 先同步到 GitLab & GitCode
+      # ----------------------------------------------------------
+      - name: Sync to GitLab
+        uses: Jyf0214/reusable-sync/.github/workflows/action.yml@main
+        with:
+          target-remote-host: 'gitlab.hk'
+          git-auth-user: 'oauth2'
+          target-repo-owner: 'Jyf0214'
+          target-repo-name: 'BiliBiliToolPro'
+        secrets:
+          target-token: ${{ secrets.GITLAB_TOKEN }}
+
+      - name: Sync to GitCode
+        uses: Jyf0214/reusable-sync/.github/workflows/action.yml@main
+        with:
+          target-remote-host: 'gitcode.com'
+          git-auth-user: ${{ github.repository_owner }}
+          target-repo-owner: ${{ github.repository_owner }}
+          target-repo-name: ${{ github.event.repository.name }}
+        secrets:
+          target-token: ${{ secrets.GITCODE_TOKEN }}
+
+      # ----------------------------------------------------------
+      # 2. 环境准备 & 后续任务
+      # ----------------------------------------------------------
       - name: Set time zone
         run: sudo timedatectl set-timezone 'Asia/Shanghai'
 
@@ -29,6 +53,13 @@ jobs:
           distribution: 'temurin'
           java-version: '8'
 
+      - name: Cache Maven
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-maven-
+
       - name: Set up Python 3.9
         uses: actions/setup-python@v4
         with:
@@ -39,13 +70,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests cryptography resend exchangelib msal
           python bing.py && python git.py || true
-
-      - name: Cache Maven
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-maven-
 
       - name: Setup .NET 6
         uses: actions/setup-dotnet@v3
@@ -68,32 +92,19 @@ jobs:
 
       - name: Download & run BiliBiliToolPro
         run: |
-          LATEST=$(curl -s https://api.github.com/repos/RayWangQvQ/BiliBiliToolPro/releases/latest)
+          set -e
+          LATEST=$(curl --retry 3 -s https://api.github.com/repos/RayWangQvQ/BiliBiliToolPro/releases/latest) || {
+            echo "::warning::获取 BiliBiliToolPro 最新版本失败，跳过该步骤"
+            exit 0
+          }
           DL_URL=$(echo "$LATEST" | jq -r '.assets[] | select(.name | endswith("linux-x64.zip")).browser_download_url')
+          [ -z "$DL_URL" ] && {
+            echo "::warning::未找到 linux-x64.zip 下载地址，跳过该步骤"
+            exit 0
+          }
           wget "$DL_URL" -O tool.zip
           unzip -o tool.zip -d tool
           EXEC=$(find tool -name "Ray.BiliBiliTool.Console" -type f)
           chmod +x "$EXEC"
           "$EXEC" --runTasks=Daily
           "$EXEC" --runTasks=Manga
-
-  sync-gitlab:
-    uses: Jyf0214/reusable-sync/.github/workflows/action.yml@v1.0.0
-    with:
-      target-remote-host: 'gitlab.hk'
-      git-auth-user: 'oauth2'
-      target-repo-owner: 'Jyf0214'
-      target-repo-name: 'BiliBiliToolPro'
-    secrets:
-      target-token: ${{ secrets.GITLAB_TOKEN }}
-
-  sync-gitcode:
-    needs: run-daily-task
-    uses: Jyf0214/reusable-sync/.github/workflows/action.yml@v1.0.0
-    with:
-      target-remote-host: 'gitcode.com'
-      git-auth-user: '${{ github.repository_owner }}'
-      target-repo-owner: '${{ github.repository_owner }}'
-      target-repo-name: '${{ github.event.repository.name }}'
-    secrets:
-      target-token: ${{ secrets.GITCODE_TOKEN }}
