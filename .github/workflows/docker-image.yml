@@ -3,13 +3,16 @@ name: bilibili-daily-task
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 16 * * *'          # UTC 16:00 等于北京 00:00
+    - cron: '0 16 * * *' # UTC 16:00 等于北京 00:00
 
 env:
   ASPNETCORE_ENVIRONMENT: ${{ secrets.ENV }}
   Ray_BiliBiliCookies__1: ${{ secrets.COOKIESTR }}
   Ray_BiliBiliCookies__2: ${{ secrets.COOKIESTR_2 }}
   Ray_DailyTaskConfig__NumberOfCoins: 0
+  # 将 secrets 转换为 env，以便在后续步骤中使用
+  GITLAB_TOKEN_ENV: ${{ secrets.GITLAB_TOKEN }}
+  GITCODE_TOKEN_ENV: ${{ secrets.GITCODE_TOKEN }}
 
 jobs:
   run-daily-task:
@@ -25,8 +28,8 @@ jobs:
           git-auth-user: 'oauth2'
           target-repo-owner: 'Jyf0214'
           target-repo-name: 'BiliBiliToolPro'
-        secrets:
-          target-token: ${{ secrets.GITLAB_TOKEN }}
+          # 通过 with 传递 token
+          target-token: ${{ env.GITLAB_TOKEN_ENV }}
 
       - name: Sync to GitCode
         uses: Jyf0214/reusable-sync/.github/workflows/action.yml@main
@@ -35,8 +38,8 @@ jobs:
           git-auth-user: ${{ github.repository_owner }}
           target-repo-owner: ${{ github.repository_owner }}
           target-repo-name: ${{ github.event.repository.name }}
-        secrets:
-          target-token: ${{ secrets.GITCODE_TOKEN }}
+          # 通过 with 传递 token
+          target-token: ${{ env.GITCODE_TOKEN_ENV }}
 
       # ----------------------------------------------------------
       # 2. 环境准备 & 后续任务
