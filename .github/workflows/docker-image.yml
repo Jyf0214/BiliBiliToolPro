@@ -14,32 +14,22 @@ env:
 
 jobs:
   # ---
-  # 任务 1: 使用可复用工作流同步到 GitLab
-  # ---
-  sync-to-gitlab:
-    # 在 jobs 顶层使用 'uses' 来调用可复用工作流
-    uses: Jyf0214/reusable-sync/.github/workflows/action.yml@main
-    with:
-      target-remote-host: 'gitlab.hk'
-      git-auth-user: 'oauth2'
-      target-repo-owner: 'Jyf0214'
-      target-repo-name: 'BiliBiliToolPro'
-    # 使用 'secrets' 块来传递机密信息给可复用工作流
-    secrets:
-      target-token: ${{ secrets.GITLAB_TOKEN }}
-
-  # ---
-  # 任务 2: 使用可复用工作流同步到 GitCode
+  # 任务 2: 同步到 GitCode
   # ---
   sync-to-gitcode:
-    uses: Jyf0214/reusable-sync/.github/workflows/action.yml@main
-    with:
-      target-remote-host: 'gitcode.com'
-      git-auth-user: ${{ github.repository_owner }}
-      target-repo-owner: ${{ github.repository_owner }}
-      target-repo-name: ${{ github.event.repository.name }}
-    secrets:
-      target-token: ${{ secrets.GITCODE_TOKEN }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 获取所有历史记录，以便推送
+
+      - name: Sync to GitCode
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git remote add gitcode https://${{ github.repository_owner }}:${{ secrets.GITCODE_TOKEN }}@gitcode.com/${{ github.repository_owner }}/${{ github.event.repository.name }}.git
+          git push -f --all gitcode
 
   # ---
   # 任务 3: 执行主要的每日任务
