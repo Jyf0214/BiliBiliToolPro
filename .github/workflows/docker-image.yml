@@ -14,7 +14,7 @@ env:
 
 jobs:
   # ---
-  # 任务 2: 同步到 GitCode
+  # 任务 1: 同步到 GitCode
   # ---
   sync-to-gitcode:
     runs-on: ubuntu-latest
@@ -25,16 +25,24 @@ jobs:
           fetch-depth: 0 # 获取所有历史记录，以便推送
 
       - name: Sync to GitCode
+        env:
+          # 从仓库机密中获取安全的电子邮件地址
+          SAFE_EMAIL: ${{ secrets.SAFE_EMAIL }}
         run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          # 配置提交的用户名和电子邮件
+          git config --global user.name "${{ github.repository_owner }}"
+          git config --global user.email "${SAFE_EMAIL}"
+
+          # 添加 GitCode 远程仓库并强制推送
           git remote add gitcode https://${{ github.repository_owner }}:${{ secrets.GITCODE_TOKEN }}@gitcode.com/${{ github.repository_owner }}/${{ github.event.repository.name }}.git
           git push -f --all gitcode
 
   # ---
-  # 任务 3: 执行主要的每日任务
+  # 任务 2: 执行主要的每日任务
   # ---
   run-daily-task:
+    # 确保此任务在同步任务成功后才运行
+    needs: [sync-to-gitcode]
     runs-on: ubuntu-latest
     steps:
       - name: Set time zone
