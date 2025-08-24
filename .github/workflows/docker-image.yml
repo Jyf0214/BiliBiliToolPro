@@ -35,8 +35,6 @@ jobs:
   # 任务 3: 执行主要的每日任务
   # ---
   run-daily-task:
-    # 使用 'needs' 来确保此任务在前两个同步任务成功后才运行
-    needs: [sync-to-gitlab, sync-to-gitcode]
     runs-on: ubuntu-latest
     steps:
       - name: Set time zone
