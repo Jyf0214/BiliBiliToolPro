@@ -13,7 +13,7 @@ on:
 jobs:
   refresh-cookie:
     # 使用最新的 ubuntu 系统
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       # 第一步：拉取你的仓库代码
       - name: Checkout repository
