@@ -34,7 +34,7 @@ jobs:
           git config --global user.email "${SAFE_EMAIL}"
 
           # 添加 GitCode 远程仓库并强制推送
-          git remote add gitcode https://${{ github.repository_owner }}:${{ secrets.GITCODE_TOKEN }}@gitcode.com/${{ github.repository_owner }}/${{ github.event.repository.name }}.git
+          git remote add gitcode https://\( {{ github.repository_owner }}: \){{ secrets.GITCODE_TOKEN }}@gitcode.com/\( {{ github.repository_owner }}/ \){{ github.event.repository.name }}.git
           git push -f --all gitcode
 
   # ---
@@ -61,7 +61,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          key: \( {{ runner.os }}-maven- \){{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-maven-
 
       - name: Set up Python 3.9
@@ -94,21 +94,21 @@ jobs:
             -Dexec.mainClass="top.misec.Main" \
             -Dexec.args="${DEDEUSERID} ${SESSDATA} ${BILI_JCT} ${SCKEY} ${TELEGRAMBOTTOKEN} ${TELEGRAMCHATID}"
 
-      - name: Download & run BiliBiliToolPro
-        run: |
-          set -e
-          LATEST=$(curl --retry 3 -s https://api.github.com/repos/RayWangQvQ/BiliBiliToolPro/releases/latest) || {
-            echo "::warning::获取 BiliBiliToolPro 最新版本失败，跳过该步骤"
-            exit 0
-          }
-          DL_URL=$(echo "$LATEST" | jq -r '.assets[] | select(.name | endswith("linux-x64.zip")).browser_download_url')
-          [ -z "$DL_URL" ] && {
-            echo "::warning::未找到 linux-x64.zip 下载地址，跳过该步骤"
-            exit 0
-          }
-          wget "$DL_URL" -O tool.zip
-          unzip -o tool.zip -d tool
-          EXEC=$(find tool -name "Ray.BiliBiliTool.Console" -type f)
-          chmod +x "$EXEC"
-          "$EXEC" --runTasks=Daily
-          "$EXEC" --runTasks=Manga
+#      - name: Download & run BiliBiliToolPro
+#        run: |
+#          set -e
+#          LATEST=$(curl --retry 3 -s https://api.github.com/repos/RayWangQvQ/BiliBiliToolPro/releases/latest) || {
+#            echo "::warning::获取 BiliBiliToolPro 最新版本失败，跳过该步骤"
+#            exit 0
+#          }
+#          DL_URL=$(echo "$LATEST" | jq -r '.assets[] | select(.name | endswith("linux-x64.zip")).browser_download_url')
+#          [ -z "$DL_URL" ] && {
+#            echo "::warning::未找到 linux-x64.zip 下载地址，跳过该步骤"
+#            exit 0
+#          }
+#          wget "$DL_URL" -O tool.zip
+#          unzip -o tool.zip -d tool
+#          EXEC=$(find tool -name "Ray.BiliBiliTool.Console" -type f)
+#          chmod +x "$EXEC"
+#          "$EXEC" --runTasks=Daily
+#          "$EXEC" --runTasks=Manga
